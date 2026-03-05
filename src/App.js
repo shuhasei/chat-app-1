@@ -2150,15 +2150,21 @@ const MessageItem = React.memo(({ m, user, sender, isGroup, db: db2, appId: appI
   const [avatarError, setAvatarError] = useState(false);
   const isInvalidBlob = !isMe && m.content?.startsWith("blob:");
   const base64ToBlobUrl = async (base64Data, mimeType) => {
-    try {
-      const res = await fetch(`data:${mimeType};base64,${base64Data}`);
-      const blob = await res.blob();
-      return URL.createObjectURL(blob);
-    } catch (e) {
-      console.error("Blob creation failed", e);
-      return null;
+  try {
+    // fetchを使わず、atobを使ってメモリ上で直接Blobに変換する
+    const byteCharacters = atob(base64Data);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
     }
-  };
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], { type: mimeType });
+    return URL.createObjectURL(blob);
+  } catch (e) {
+    console.error("Blob creation failed", e);
+    return null;
+  }
+};
   const setBlobSrcFromBase64 = async (base64Data, mimeType) => {
     const url = await base64ToBlobUrl(base64Data, mimeType);
     if (url) setMediaSrc(url);
@@ -2534,7 +2540,7 @@ const PostItem = ({ post, user, allUsers, db: db2, appId: appId2, profile, showN
         mergedData = await loadPostChunksReliable();
         if (mergedData) {
           try {
-            if (mergedData.startsWith("data:")) {
+            
               setMediaSrc(mergedData);
             } else {
               const mimeType = post.mimeType || (post.mediaType === "video" ? "video/webm" : "image/jpeg");
