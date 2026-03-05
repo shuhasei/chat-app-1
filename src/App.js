@@ -2534,12 +2534,20 @@ const PostItem = ({ post, user, allUsers, db: db2, appId: appId2, profile, showN
         mergedData = await loadPostChunksReliable();
         if (mergedData) {
           try {
+            if (mergedData) {
+          try {
             if (mergedData.startsWith("data:")) {
               setMediaSrc(mergedData);
             } else {
               const mimeType = post.mimeType || (post.mediaType === "video" ? "video/webm" : "image/jpeg");
-              const res = await fetch(`data:${mimeType};base64,${mergedData}`);
-              const blob = await res.blob();
+              // fetchを使わず直接Blobに変換
+              const byteCharacters = atob(mergedData);
+              const byteNumbers = new Array(byteCharacters.length);
+              for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+              }
+              const byteArray = new Uint8Array(byteNumbers);
+              const blob = new Blob([byteArray], { type: mimeType });
               setMediaSrc(URL.createObjectURL(blob));
             }
           } catch (e) {
